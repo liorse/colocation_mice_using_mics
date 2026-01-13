@@ -54,6 +54,54 @@ This system uses **beamforming** - a spatial filtering technique that uses time 
 
 **Critical requirement**: All microphones must share the same clock signal for phase-coherent recording.
 
+### System Architecture: Microphone-to-FPGA Interface
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Digilent Nexys A7-100T FPGA Board                          │
+│                                                              │
+│  ┌─────────────────┐         ┌──────────────────────┐      │
+│  │ Clock Generator │ 4 MHz   │  64× PDM Receivers   │      │
+│  │  (PLL Divider)  ├────────►│  (CIC Decimation)    │      │
+│  │  100MHz → 4MHz  │         │                      │      │
+│  └─────────────────┘         └──────────┬───────────┘      │
+│                                         │ 16-bit PCM        │
+│  ┌──────────────────┐         500 kHz sample rate         │
+│  │ Pmod Ports (32)  │◄─────┐                              │
+│  │ + GPIO Headers   │      │  ┌──────────────────────┐   │
+│  └───────┬──────────┘      └──┤ Beamforming Engine   │   │
+│          │                     │ (TDOA Calculation)   │   │
+│          │ 32 DATA lines       └──────────┬───────────┘   │
+│          │                                 │               │
+│          │                     ┌───────────▼──────────┐   │
+│          │                     │  USB 3.0 / Ethernet  │   │
+│          │                     │  (to Host PC)        │   │
+└──────────┼─────────────────────┴──────────────────────────┘
+           │
+           │
+    ┌──────▼──────────────────────────────────────┐
+    │  Custom Microphone Array PCB                │
+    │  (Fermat's Spiral Pattern)                  │
+    │                                              │
+    │  64× Knowles SPH0641LU4H-1                 │
+    │                                              │
+    │  Connections per mic:                       │
+    │  • VDD (3.3V) ───────────┐                 │
+    │  • GND ──────────────────┤                 │
+    │  • CLOCK (4MHz) ◄────────┤ Shared buses    │
+    │  • DATA (PDM) ───────────┤ Individual lines│
+    │  • SELECT (L/R) ─────────┘ Config per pair │
+    │                                              │
+    └──────────────────────────────────────────────┘
+```
+
+**Interface Details:**
+- **32 stereo pairs**: Each pair shares one DATA line, differentiated by SELECT pin (L=GND, R=VDD)
+- **Clock distribution**: Single 4 MHz clock fanned out to all 64 microphones with <1mm trace length matching
+- **PDM data**: 32 individual DATA lines from FPGA GPIO to microphone pairs
+- **Decimation**: FPGA converts 4 MHz PDM to 500 kHz 16-bit PCM in real-time
+- **Throughput**: 64 channels × 500 kHz × 16 bits = 512 Mbit/s to host PC
+
 ### Sampling Requirements
 
 For 80 kHz ultrasonic signals:
@@ -64,20 +112,40 @@ For 80 kHz ultrasonic signals:
 
 ### Implementation Options
 
-#### Option 1: FPGA (Recommended)
-- **Hardware**: Xilinx Artix-7 or Intel Cyclone V
-- **Advantages**: Parallel processing, real-time beamforming
-- **Data bandwidth**: 512 Mbit/s (64 channels × 500 kHz × 16-bit)
-- **Code**: Verilog implementation with CIC decimation filters
+#### Option 1: FPGA (Recommended for 64-Microphone Array)
+
+**Recommended Board: Digilent Nexys A7-100T**
+- **FPGA Chip**: Xilinx XC7A100T-1CSG324C
+- **Logic Cells**: 101,440
+- **Block RAM**: 4,860 Kbit
+- **DSP Slices**: 240 (perfect for CIC decimation filters)
+- **I/O**: 100+ user I/O through 4× Pmod connectors + expansion headers
+- **Clock**: 100 MHz oscillator (generates 4 MHz PDM clock)
+- **Memory**: 128 MB DDR2 RAM for audio buffering
+- **Price**: ~$409 USD ([Digilent Store](https://digilent.com/shop/nexys-a7-amd-artix-7-fpga-trainer-board-recommended-for-ece-curriculum/) | [DigiKey](https://www.digikey.com/en/products/detail/digilent-inc/410-292/5117190) | [Amazon](https://www.amazon.com/Digilent-Nexys-DDR-Artix-7-FPGA/dp/B0714MKJ4H))
+
+**Why Nexys A7-100T?**
+- **Direct connections**: 32 data pins via Pmod ports can handle 64 mics (L/R stereo pairs)
+- **No I/O expanders needed**: Simpler hardware design
+- **Parallel processing**: All 64 channels processed simultaneously
+- **Real-time beamforming**: Calculate TDOA for 2,016 microphone pairs in hardware
+- **Data bandwidth**: 512 Mbit/s (64 channels × 500 kHz × 16-bit PCM)
+
+**Alternative Budget Option: Digilent Arty A7-100T**
+- Same FPGA chip but fewer accessible I/O pins (~$299)
+- Requires external I/O multiplexers for 64 microphones
+- [Purchase Link](https://digilent.com/shop/arty-a7-100t-artix-7-fpga-development-board/)
 
 #### Option 2: Microcontroller Array
 - **Hardware**: 6-8 STM32H7 microcontrollers
 - **Interface**: SAI peripheral for PDM reception
 - **Synchronization**: Shared clock distribution critical
+- **Cost**: ~$300-400 total but more complex firmware
 
 #### Option 3: Raspberry Pi CM4
 - **Hardware**: Compute Module 4 with custom microphone HATs
 - **Advantages**: Linux software stack, easier development
+- **Limitations**: Software-based processing, higher latency
 
 ## Key Research Findings
 
@@ -101,17 +169,57 @@ For 80 kHz ultrasonic signals:
 ## Getting Started
 
 ### Hardware Requirements
-- 64× Knowles SPH0641LU4H-1 MEMS microphones
-- FPGA development board (Artix-7 or Cyclone V) OR
-- 6-8× STM32H7 microcontrollers with SAI support
-- Clock generation circuit (4 MHz synchronized distribution)
-- USB 3.0 or Ethernet for data transfer
+
+#### Microphones (Exact Specification from Datasheet)
+**64× Knowles SPH0641LU4H-1 MEMS Microphones**
+- **Part Number**: SPH0641LU4H-1 (as specified in `mic_SPH0641LU4H-1.pdf`)
+- **Type**: Digital MEMS microphone with PDM output
+- **Output Format**: PDM (Pulse Density Modulation), single-bit digital stream
+- **Operating Voltage**: 1.62-3.6V (typical 3.3V)
+- **SNR**: 64.3 dB(A) - suitable for ultrasonic recording
+- **Frequency Response**: Optimized for ultrasonic (3.072-4.8 MHz clock)
+- **Sensitivity**: -26 dBFS
+- **Package**: Surface mount, top-port design
+- **Pinout**: 5 pins (VDD, GND, CLOCK, DATA, SELECT for L/R channel)
+- **Cost**: ~$2-3 per unit in bulk
+
+**Critical Connection Requirements:**
+- All 64 microphones must share **identical 4 MHz clock signal**
+- Clock jitter must be <250 ns for phase-coherent recording
+- Separate DATA line for each microphone (or 32 stereo pairs using SELECT pin)
+
+#### FPGA Development Board
+**Digilent Nexys A7-100T** (Recommended)
+- FPGA: Xilinx XC7A100T-1CSG324C Artix-7
+- Handles 64 PDM microphones with CIC decimation filters
+- Direct microphone connections via Pmod expansion ports
+- Purchase: ~$409 ([Buy here](https://digilent.com/shop/nexys-a7-amd-artix-7-fpga-trainer-board-recommended-for-ece-curriculum/))
+
+#### Supporting Hardware
+- **Clock Generation**: Si5351 programmable clock generator or FPGA PLL (for 4 MHz distribution)
+- **Power Supply**: Low-noise 3.3V regulator for microphones (e.g., TPS7A4700)
+- **PCB**: Custom microphone array board with Fermat's spiral pattern
+- **Data Interface**: USB 3.0 (512 Mbit/s bandwidth) or Gigabit Ethernet
 
 ### Software Requirements
-- FPGA: Xilinx Vivado or Intel Quartus
-- MCU: STM32CubeIDE with HAL library
-- DSP: PDM-to-PCM decimation filters (CIC filters)
-- Analysis: Python with NumPy, SciPy for beamforming algorithms
+- **FPGA Tools**: Xilinx Vivado Design Suite (free WebPACK edition supports Artix-7)
+- **HDL**: Verilog implementation with CIC decimation filters (example code available)
+- **DSP Processing**: PDM-to-PCM conversion with 8-12× decimation
+- **Beamforming**: Python with NumPy, SciPy for TDOA calculation and localization
+- **Visualization**: MATLAB or Python for real-time position tracking
+
+### Bill of Materials (Estimated)
+
+| Component | Quantity | Unit Price | Total |
+|-----------|----------|------------|-------|
+| Knowles SPH0641LU4H-1 | 64 | $2.50 | $160 |
+| Nexys A7-100T FPGA | 1 | $409 | $409 |
+| Custom PCB (array board) | 1 | $50-100 | $75 |
+| Clock generator + components | 1 | $20 | $20 |
+| Power supplies, connectors | - | $30 | $30 |
+| **Total Estimated Cost** | | | **~$694** |
+
+*For comparison: Commercial Cam64 system costs ~$10,000+*
 
 ## Related Papers
 
