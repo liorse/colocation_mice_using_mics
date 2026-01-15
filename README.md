@@ -166,6 +166,64 @@ For 80 kHz ultrasonic signals:
 - Females produce **<1%** but do vocally interact with males
 - Males vocalize primarily during close proximity, especially ano-genital investigation
 
+### Individual Voice Characteristics: Can We Discern One Mouse from Another?
+
+Just as humans have unique voice characteristics that allow us to identify individuals by their voice, **mice also exhibit individual-specific vocal signatures**. This opens up exciting possibilities for non-invasive identification and behavioral analysis.
+
+#### Evidence for Individual Vocal Signatures
+
+**Research Findings:**
+- **Individual differences** in USV characteristics have been documented across multiple studies
+- **Frequency patterns, call duration, and spectral features** vary between individual mice
+- **Machine learning approaches** (CNNs, autoencoders) have shown promise in identifying individual mice from their vocalizations
+
+**Key Questions:**
+1. **Can we identify individual mice by their voice alone?**
+   - Similar to human voice recognition, individual mice may have unique vocal "fingerprints"
+   - Features such as fundamental frequency, formant structure, and temporal patterns may be individual-specific
+   - This could complement or even replace spatial localization methods in some scenarios
+
+2. **What acoustic features distinguish individuals?**
+   - **Spectral features:** Frequency content, harmonics, formants
+   - **Temporal features:** Call duration, inter-call intervals, rhythm patterns
+   - **Amplitude features:** Intensity profiles, dynamic range
+   - **Syntactic features:** Call sequence patterns and transitions
+
+3. **How reliable is voice-based identification?**
+   - Current spatial localization achieves 91-97% accuracy
+   - Voice-based identification could potentially achieve similar or better accuracy
+   - Combining both methods (spatial + acoustic) may provide even higher confidence
+
+#### Potential Applications
+
+**Advantages of Voice-Based Identification:**
+- **Non-invasive:** No need for precise spatial localization if voice characteristics are sufficient
+- **Works at distance:** Can identify individuals even when spatial resolution is limited
+- **Behavioral insights:** May reveal individual personality traits, emotional states, or social roles
+- **Complementary:** Can be combined with spatial localization for robust multi-animal tracking
+
+**Research Opportunities:**
+- **Deep learning models** for individual mouse voice recognition
+- **Feature extraction** from ultrasonic vocalizations (MFCCs, spectrograms, etc.)
+- **Longitudinal studies** tracking how individual voices change over time
+- **Social network analysis** using voice-based identification to map interaction patterns
+
+#### Current State and Future Directions
+
+**Existing Work:**
+- **VocalMat** (eLife, 2021) - CNN-based USV classification with ~86% accuracy for call types
+- **Deep Learning Analysis** (Nature Scientific Reports, 2023) - Auto-Encoder, U-NET, RNN approaches for segmentation
+- **VCL Benchmark** (2024) - Large-scale dataset that could enable individual identification research
+
+**Open Questions:**
+- How stable are individual vocal signatures over time?
+- Do vocal characteristics correlate with age, sex, strain, or social status?
+- Can we distinguish between genetically identical mice (e.g., littermates)?
+- What is the minimum number of vocalizations needed for reliable identification?
+
+**Integration with This Project:**
+The high-precision localization system described here provides an ideal platform for collecting labeled vocalization data from known individuals, which can then be used to train and validate individual voice recognition models. This dual approach—spatial localization + acoustic identification—could revolutionize multi-animal behavioral studies.
+
 ## Getting Started
 
 ### Hardware Requirements
@@ -340,6 +398,11 @@ For building your 64-microphone Artix-7 system:
 Additional papers on mouse vocalization analysis (see `Research_Papers_Summary.md`):
 - **VocalMat** (eLife, 2021) - CNN-based USV classification with ~86% accuracy
 - **Deep Learning Analysis** (Nature Scientific Reports, 2023) - Auto-Encoder, U-NET, RNN approaches
+
+**Individual Voice Recognition:**
+- Research on individual-specific vocal signatures in mice is an emerging field
+- The high-quality recordings enabled by this system provide an ideal dataset for training individual identification models
+- Combining spatial localization with acoustic feature analysis could enable robust multi-animal tracking
 
 ## License
 
