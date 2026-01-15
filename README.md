@@ -355,3 +355,8 @@ lior.segev@weizmann.ac.il
 
 **Last Updated**: 2026-01-13
 **Research compiled with assistance from**: Claude Sonnet 4.5
+
+
+add this website for a possible microphone array setup:
+https://www.ngene.co/microphone-array
+
